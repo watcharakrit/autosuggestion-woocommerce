@@ -1,8 +1,105 @@
 <html>
   <header>
     <title>Auto Suggestion with WooCommerce</title>
+    <style>
+      body {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;;
+      }
+
+      .header-search-area {
+        width: 100%;
+      }
+    </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   </header>
   <body>
-    Hello, AutoSuggestion.
+    <div class="header-search-area">
+      <div class="container">
+        <div class="row gap10">
+          <div class="col-md-12 col-sm-12 col-12">
+            <div class="product-search">
+              <form method="get" action="https://talardthai.com">
+                <div class="input-group"> <input type="text" name="s"
+                    class="product-search-input product-autocomplete-js form-control" placeholder="Search Products Here"
+                    value=""> <input type="hidden" name="post_type" value="product">
+                  <div class="btn-group category-search-dropdown-js">
+                    <div class="dropdown"> <input type="hidden" name="product_cat" value=""> <button type="button"
+                        class="btn rtin-btn-cat dropdown-toggle" data-toggle="dropdown" aria-expanded="false">All
+                        Categories</button>
+                      <div class="dropdown-menu" role="menu">
+                        <ul>
+                          <li data-slug="">All Categories</li>
+                          <li data-slug="premium-thai-products"><span>Premium Thai Products</span></li>
+                          <li data-slug="rice-noodles"><span>Rice &amp; Noodles</span></li>
+                          <li data-slug="curry-pastes"><span>Curry Pastes &amp; Chilli Pastes</span></li>
+                          <li data-slug="sauces"><span>Sauces</span></li>
+                          <li data-slug="exotic-fruits"><span>Exotic Fruits</span></li>
+                          <li data-slug="fresh-vegetables"><span>Fresh Vegetables</span></li>
+                          <li data-slug="flowers"><span>Flowers</span></li>
+                          <li data-slug="seafood"><span>Seafood</span></li>
+                          <li data-slug="frozen-foods"><span>Frozen Foods</span></li>
+                          <li data-slug="seasoning-baking"><span>Seasoning and Baking</span></li>
+                          <li data-slug="preserved-foods"><span>Preserved Foods</span></li>
+                          <li data-slug="drinks"><span>Drinks</span></li>
+                          <li data-slug="crisps-snacks"><span>Crisps &amp; Snacks</span></li>
+                          <li data-slug="packaging"><span>Packaging</span></li>
+                          <li data-slug="kitchenware"><span>Kitchenware</span></li>
+                          <li data-slug="kitchen-hygiene"><span>Kitchen Hygiene</span></li>
+                          <li data-slug="thai-essentials"><span>Thai Essentials</span></li>
+                        </ul>
+                      </div>
+                    </div> <button type="submit" class="btn rtin-btn-search"><i class="flaticon-search"></i></button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/vue@next"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="./scripts/oauth.js"></script>
+    <script src="./scripts/sha.js"></script>
+    <script>
+      const oauth = OAuth({
+          consumer: {
+            key: 'ck_98c7523ea99aaad0326cd88e0f7472cbbd020d92',
+            secret: 'cs_1dfd9b1be40ea63ae4d47521ee4a8c51231bb3b4',
+          },
+          signature_method: 'HMAC-SHA1',
+          hash_function(base_string, key) {
+            var hmacObj = new jsSHA( 'SHA-1', 'TEXT' )
+            hmacObj.setHMACKey( key, 'TEXT' )
+            hmacObj.update(base_string)
+            return hmacObj.getHMAC('B64')
+          },
+        })
+
+        const request_data = {
+            url: 'https://talardthai.com/wp-json/wc/v3/products/7205',
+            method: 'GET',
+            // data: { status: 'Hello Ladies + Gentlemen, a signed OAuth request!' },
+          }
+
+        axios({
+            url: request_data.url,
+            method: request_data.method,
+            // data: request_data.data,
+            headers: oauth.toHeader(oauth.authorize(request_data)),
+          }).then(res => {
+            console.log('Res: ', res)
+          })
+    </script>
   </body>
 </html>
