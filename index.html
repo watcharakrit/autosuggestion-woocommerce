@@ -1,16 +1,93 @@
 <html>
   <header>
     <title>Auto Suggestion with WooCommerce</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no" />
     <style>
       body {
+        padding-top: 100px;
         height: 100%;
         display: flex;
-        align-items: center;
         justify-content: center;;
       }
 
       .header-search-area {
         width: 100%;
+      }
+
+      .cif-auto-suggestion-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        display: none;
+        box-shadow: 0 4px 4px rgba(0, 0, 0, .15);
+      }
+
+      @media (max-width: 767px) {
+        .cif-auto-suggestion-results {
+          width: calc(100vw - 40px) !important;
+        }
+      }
+
+      .cif-auto-suggestion-results a:hover {
+        text-decoration: none;
+      }
+      .cif-auto-suggestion-results a:hover .cif-auto-suggestion-result-details p {
+        color: #2f6b9b !important;
+      }
+
+      input.product-search-input:focus + .cif-auto-suggestion-results {
+        display: block;
+      } 
+      
+      .cif-auto-suggestion-results:hover {
+        display: block;
+      }
+
+      .cif-auto-suggestion-result {
+        display: flex;
+        align-items: center;
+        padding: 10px 20px;
+      }
+
+      .cif-auto-suggestion-result:hover {
+        background-color: rgba(47, 107, 156, .15);
+      }
+
+      .cif-auto-suggestion-result-thumbnail {
+        min-width: 100px;
+        background-repeat: no-repeat;
+        background-size: contain;
+        background-position: center;
+        margin-right: 20px;
+      }
+
+      @media (max-width: 767px) {
+        .cif-auto-suggestion-result-thumbnail {
+        min-width: 80px;
+        margin-right: 15px;
+      }
+      }
+
+      .cif-auto-suggestion-result-thumbnail::before {
+        content: '';
+        display: block;
+        padding-top: 100%;
+      }
+
+      .cif-auto-suggestion-result-details p {
+        margin-bottom: 0;
+        color: black;
+        text-decoration: none;
+      }
+
+      .cif-auto-suggestion-loading {
+        text-align: center;
+        padding: 10px 20px;;
+      }
+
+      .cif-auto-suggestion-loading img {
+        width: 30px;
       }
     </style>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
@@ -45,7 +122,7 @@
                           <li data-slug="seasoning-baking"><span>Seasoning and Baking</span></li>
                           <li data-slug="preserved-foods"><span>Preserved Foods</span></li>
                           <li data-slug="drinks"><span>Drinks</span></li>
-                          <li data-slug="crisps-snacks"><span>Crisps &amp; Snacks</span></li>
+                          <li data-slug="crispssnacks"><span>Crisps &amp; Snacks</span></li>
                           <li data-slug="packaging"><span>Packaging</span></li>
                           <li data-slug="kitchenware"><span>Kitchenware</span></li>
                           <li data-slug="kitchen-hygiene"><span>Kitchen Hygiene</span></li>
@@ -67,39 +144,203 @@
       integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
       integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/vue@next"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- <script src="https://unpkg.com/vue@next"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="./scripts/oauth.js"></script>
     <script src="./scripts/sha.js"></script>
     <script>
-      const oauth = OAuth({
-          consumer: {
-            key: 'ck_98c7523ea99aaad0326cd88e0f7472cbbd020d92',
-            secret: 'cs_1dfd9b1be40ea63ae4d47521ee4a8c51231bb3b4',
-          },
-          signature_method: 'HMAC-SHA1',
-          hash_function(base_string, key) {
-            var hmacObj = new jsSHA( 'SHA-1', 'TEXT' )
-            hmacObj.setHMACKey( key, 'TEXT' )
-            hmacObj.update(base_string)
-            return hmacObj.getHMAC('B64')
-          },
-        })
 
-        const request_data = {
-            url: 'https://talardthai.com/wp-json/wc/v3/products/7205',
+      (($) => {
+        $(() => {
+          const sizeAutoSuggestion = 5
+          const oauth = OAuth({
+            consumer: {
+              key: 'ck_98c7523ea99aaad0326cd88e0f7472cbbd020d92',
+              secret: 'cs_1dfd9b1be40ea63ae4d47521ee4a8c51231bb3b4',
+            },
+            signature_method: 'HMAC-SHA1',
+            hash_function(base_string, key) {
+              var hmacObj = new jsSHA('SHA-1', 'TEXT')
+              hmacObj.setHMACKey(key, 'TEXT')
+              hmacObj.update(base_string)
+              return hmacObj.getHMAC('B64')
+            },
+          })
+          
+          // Get all product categories
+          let product_categories = []
+          const request_data_categories = {
+            url: 'https://talardthai.com/wp-json/wc/v3/products/categories?per_page=99',
             method: 'GET',
-            // data: { status: 'Hello Ladies + Gentlemen, a signed OAuth request!' },
+          }
+          axios({
+            url: request_data_categories.url,
+            method: request_data_categories.method,
+            headers: oauth.toHeader(oauth.authorize(request_data_categories)),
+          }).then(res => {
+            product_categories = res.data
+          })
+
+
+          // Get all product tags
+          let product_tags = []
+          const request_data_tags = {
+            url: 'https://talardthai.com/wp-json/wc/v3/products/tags?per_page=99',
+            method: 'GET',
+          }
+          axios({
+            url: request_data_tags.url,
+            method: request_data_tags.method,
+            headers: oauth.toHeader(oauth.authorize(request_data_tags)),
+          }).then(res => {
+            product_tags = res.data
+          })
+          
+
+          let typingTimer = null
+          const $InputSearch = $('.product-search-input')
+          const $CifAutoSuggestionResultBox = $('<div id="cif-auto-suggestion-results" class="cif-auto-suggestion-results"></div>').insertAfter($InputSearch)
+          $CifAutoSuggestionResultBox.width($InputSearch.outerWidth())
+
+          function clearSearchResults() {
+            $CifAutoSuggestionResultBox.html(``)
           }
 
-        axios({
-            url: request_data.url,
-            method: request_data.method,
-            // data: request_data.data,
-            headers: oauth.toHeader(oauth.authorize(request_data)),
-          }).then(res => {
-            console.log('Res: ', res)
+          function renderLoading() {
+            $CifAutoSuggestionResultBox.html(`<div class="cif-auto-suggestion-loading"><img src="./loading.svg"/></div>`)
+          }
+
+          function renderSearchResults(results) {
+            let resultStr = ''
+            results.forEach(result => {
+              resultStr += `<a href="${result.permalink}" target="_blank">
+                <div class="cif-auto-suggestion-result">
+                  <div class="cif-auto-suggestion-result-thumbnail" style="background-image: url('${result.images[0]? result.images[0].src: ''}')"></div>
+                  <div class="cif-auto-suggestion-result-details">
+                    <p><strong>${result.name}</strong></p>
+                    ${result.description}
+                  </div>
+                </div>
+              </a>`
+            })
+
+            $CifAutoSuggestionResultBox.html(`<div class="cif-auto-suggestion-items">${resultStr}</div>`)
+          }
+
+          $InputSearch.on('input', function(e) {
+            clearTimeout(typingTimer)
+            typingTimer = setTimeout( async function() {
+              const value = e.target.value
+
+              if (value === '') {
+                clearSearchResults()
+                return false
+              }
+
+              const search = value.toLowerCase()
+              let SearchCategories = []
+              product_categories.forEach(cate => {
+                if (cate.name.toLowerCase().replace('&amp;', '&').search(search) != -1) {
+                  if (SearchCategories.indexOf(cate.id) == -1) {
+                    SearchCategories.push(cate.id)
+
+                    // is main Categories -> get SubCate
+                    if (cate.parent == 0) {
+                      product_categories.forEach(subCate => {
+                        if (subCate.parent == cate.id && SearchCategories.indexOf(subCate.id) == -1) {
+                          SearchCategories.push(subCate.id)
+                        }
+                      })
+                    }
+                  }
+                }
+              })
+              SearchCategories = SearchCategories.length == 0 ? '' : SearchCategories
+
+              let SearchTags = []
+              product_tags.forEach(tag => {
+                if (tag.name.toLowerCase().search(search) != -1) {
+                  SearchTags.push(tag.id)
+                }
+              })
+              SearchTags = SearchTags.length == 0 ? '' : SearchTags
+
+              const request_data_search = {
+                url: `https://talardthai.com/wp-json/wc/v3/products?per_page=5&search=${search}`,
+                method: 'GET',
+              }
+              try {
+                renderLoading()
+                const resultSearchTitle = await axios({
+                  url: request_data_search.url,
+                  method: request_data_search.method,
+                  headers: oauth.toHeader(oauth.authorize(request_data_search)),
+                })
+
+                let searchResults = resultSearchTitle.data
+
+                if (searchResults.length === sizeAutoSuggestion) {
+                  // Render search result
+                  renderSearchResults(searchResults)
+                  return false
+                }
+
+                if (SearchCategories) {
+                  const productsId = []
+                  searchResults.forEach(product => {
+                    productsId.push(product.id)
+                  })
+                  // console.log('SearchCategories:', SearchCategories)
+                  // Get Product by categories
+                  const request_data_search_by_categories = {
+                    url: `https://talardthai.com/wp-json/wc/v3/products?per_page=${sizeAutoSuggestion - searchResults.length}&exclude=${productsId}&category=${SearchCategories}`,
+                    method: 'GET',
+                  }
+                  const resultSearchByCategories = await axios({
+                    url: request_data_search_by_categories.url,
+                    method: request_data_search_by_categories.method,
+                    headers: oauth.toHeader(oauth.authorize(request_data_search_by_categories)),
+                  })
+                  searchResults = [...searchResults, ...resultSearchByCategories.data]
+                }
+
+                if (searchResults.length === sizeAutoSuggestion) {
+                  // Render search result by categories
+                  renderSearchResults(searchResults)
+                  return false
+                }
+
+                if (SearchTags) {
+                  const productsId = []
+                  searchResults.forEach(product => {
+                    productsId.push(product.id)
+                  })
+                  // console.log('SearchTags:', SearchTags)
+                  // Get Product by categories
+                  const request_data_search_by_tags = {
+                    url: `https://talardthai.com/wp-json/wc/v3/products?per_page=${sizeAutoSuggestion - searchResults.length}&exclude=${productsId}&tag=${SearchTags}`,
+                    method: 'GET',
+                  }
+                  const resultSearchByTags = await axios({
+                    url: request_data_search_by_tags.url,
+                    method: request_data_search_by_tags.method,
+                    headers: oauth.toHeader(oauth.authorize(request_data_search_by_tags)),
+                  })
+                  searchResults = [...searchResults, ...resultSearchByTags.data]
+                }
+
+                // Render search result by tags
+                renderSearchResults(searchResults)
+              } 
+              catch (error) {
+                console.log(error)
+              }
+
+            }, 500)
           })
+        })
+      })(jQuery)
     </script>
   </body>
 </html>
