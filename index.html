@@ -238,7 +238,7 @@
                 return false
               }
 
-              const search = value.toLowerCase()
+              const search = value.toLowerCase().trim()
               let SearchCategories = []
               product_categories.forEach(cate => {
                 if (cate.name.toLowerCase().replace('&amp;', '&').search(search) != -1) {
@@ -267,7 +267,7 @@
               SearchTags = SearchTags.length == 0 ? '' : SearchTags
 
               const request_data_search = {
-                url: `https://talardthai.com/wp-json/wc/v3/products?per_page=5&search=${search}`,
+                url: `https://talardthai.com/wp-json/wc/v3/products?per_page=5&search=${search.replace(/\s/g, '+')}`,
                 method: 'GET',
               }
               try {
@@ -337,7 +337,7 @@
                 console.log(error)
               }
 
-            }, 500)
+            }, 400)
           })
         })
       })(jQuery)
